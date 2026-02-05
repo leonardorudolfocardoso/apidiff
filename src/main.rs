@@ -1,3 +1,13 @@
+use clap::Parser;
+
+#[derive(Debug, Parser)]
+struct Cli {
+    old: String,
+    new: String,
+}
+
 fn main() {
-    println!("Hello, world!");
+    let cli = Cli::parse();
+
+    println!("Comparing {:?} with {:?}...", cli.new, cli.old);
 }
