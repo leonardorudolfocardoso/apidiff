@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 
 #[derive(Debug, Parser)]
+#[command(version, about, long_about = None)]
 struct Cli {
     old: String,
     new: String,
