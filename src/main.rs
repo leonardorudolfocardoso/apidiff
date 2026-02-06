@@ -1,20 +1,51 @@
+mod change;
+mod diff;
+mod loader;
+
 use clap::Parser;
-use std::fs;
-use std::io;
+use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    old: String,
-    new: String,
+    old: PathBuf,
+    new: PathBuf,
 }
 
-fn run(cli: Cli) -> io::Result<()> {
-    let old_content = fs::read_to_string(&cli.old)?;
-    let new_content = fs::read_to_string(&cli.new)?;
+fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+    let old_spec = loader::load_file(&cli.old)?;
+    let new_spec = loader::load_file(&cli.new)?;
 
-    println!("Old ({} bytes):\n{old_content}", old_content.len());
-    println!("New ({} bytes):\n{new_content}", new_content.len());
+    let diff = diff::diff_specs(&old_spec, &new_spec);
+
+    if diff.is_empty() {
+        println!("No changes detected.");
+        return Ok(());
+    }
+
+    let breaking = diff.breaking();
+    let non_breaking = diff.non_breaking();
+
+    if !breaking.is_empty() {
+        println!("Breaking changes ({}):", breaking.len());
+        for c in &breaking {
+            println!("  {c}");
+        }
+    }
+
+    if !non_breaking.is_empty() {
+        if !breaking.is_empty() {
+            println!();
+        }
+        println!("Non-breaking changes ({}):", non_breaking.len());
+        for c in &non_breaking {
+            println!("  {c}");
+        }
+    }
+
+    if diff.has_breaking() {
+        std::process::exit(1);
+    }
 
     Ok(())
 }
@@ -24,6 +55,6 @@ fn main() {
 
     if let Err(e) = run(cli) {
         eprintln!("Error: {e}");
-        std::process::exit(1);
+        std::process::exit(2);
     }
 }
